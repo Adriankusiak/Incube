@@ -27,13 +27,21 @@ class Incubator{
 
 public:
 
-void seed(const Seeder<T>& geneSeeder){}
-void generationStep(const Imprintable<T>& tester, const int stepCount){}
-vector<T>& getGeneration(){}
+Incubator();
+Incubator(const int& mutationRate, const int& genSize);
 
+void seed(const Seeder<T>& geneSeeder);
+void breed(const Imprintable<T>& tester, const int stepCount);
+vector<T>& getGeneration();
+void setGenSize(const int& num);
+void setMutationChance(const float& percentage);
 
 
 private:
+
+vector<T> currentGen;
+int mMutationRate;
+int mGenSize;
 
 };
 
