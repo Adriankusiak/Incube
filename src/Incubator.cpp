@@ -47,22 +47,74 @@ void Incubator<T>::evolve(Imprintable<T>& tester, const int stepCount){
             twoPoint(fit);
             break;
     }
+
+    mutate();
 }
+
+
+template <typename T>
+void Incubator<T>::mutate() {
+    for(auto sequence : mCurrentGen){
+        if(mDist(mRNGen) < mMutationRate ? true : false){
+            switch(mMutationType){
+                case ALLELE_SWAP:
+                    alleleSwap(sequence);
+                    break;
+                case DESTRUCTIVE:
+                    alleleDestructive(sequence);
+                    break;
+                case GENERATIVE:
+                    alleleGenerative(sequence);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+}
+
+template <typename T>
+void Incubator<T>::alleleDestructive(vector<T>& sequence){
+    int randIndx = sequence.size()*(floor(mDist(mRNGen))/100);
+    sequence.erase(sequence.begin()+randIndx);
+}
+
+template <typename T>
+void Incubator<T>::alleleGenerative(vector<T>& sequence) {
+    int randIndx = sequence.size()*(floor(mDist(mRNGen))/100);
+    sequence.erase(sequence.begin()+randIndx);
+}
+
+template <typename T>
+void Incubator<T>::alleleSwap(vector<T>& sequence) {
+    int randIndx = sequence.size()*(floor(mDist(mRNGen))/100);
+    int randIndx2 = sequence.size()*(floor(mDist(mRNGen))/100);
+
+    while(randIndx==randIndx2) randIndx2 = sequence.size()*(floor(mDist(mRNGen))/100);
+    T allele = sequence[randIndx];
+
+
+    sequence[randIndx] = sequence[randIndx2];
+    sequence[randIndx2] = allele;
+}
+
+
+
 
 template <typename T>
 void Incubator<T>::singlePoint(const vector<vector<T>>& breeders){
 
     vector<vector<T>> newGen;
     for(int i = 0; i < mGenSize+2/2; ++i){
-        vector<T> specimen;
-        vector<T> specimen2;
+        vector<T> sequence;
+        vector<T> sequence2;
         int crossIndex = floor(breeders[0].size()*((mDist(mRNGen)/100)));
-        specimen.insert(specimen.end(), breeders[i].begin(), breeders[i].begin()+crossIndex);
-        specimen.insert(specimen.end(), breeders[i+1].begin()+crossIndex, breeders[i+1].end());
-        specimen2.insert(specimen2.end(), breeders[i+1].begin(), breeders[i+1].begin()+crossIndex);
-        specimen2.insert(specimen2.end(),  breeders[i].begin()+crossIndex, breeders[i].end());
-        newGen.push_back(specimen);
-        newGen.push_back(specimen2);
+        sequence.insert(sequence.end(), breeders[i].begin(), breeders[i].begin()+crossIndex);
+        sequence.insert(sequence.end(), breeders[i+1].begin()+crossIndex, breeders[i+1].end());
+        sequence2.insert(sequence2.end(), breeders[i+1].begin(), breeders[i+1].begin()+crossIndex);
+        sequence2.insert(sequence2.end(),  breeders[i].begin()+crossIndex, breeders[i].end());
+        newGen.push_back(sequence);
+        newGen.push_back(sequence2);
     }
 
     newGen.resize(mGenSize);
@@ -74,10 +126,10 @@ void Incubator<T>::twoPoint(const vector<vector<T>>& breeders){
 
     vector<vector<T>> newGen;
     for(int i = 0; i < mGenSize+4/4; ++i){
-        vector<T> specimen;
-        vector<T> specimen2;
-        vector<T> specimen3;
-        vector<T> specimen4;
+        vector<T> sequence;
+        vector<T> sequence2;
+        vector<T> sequence3;
+        vector<T> sequence4;
 
         int crossIndex = floor(breeders[0].size()*((mDist(mRNGen)/100)));
         int crossIndexTwo = floor(breeders[0].size()*((mDist(mRNGen)/100)));
@@ -86,25 +138,20 @@ void Incubator<T>::twoPoint(const vector<vector<T>>& breeders){
             crossIndex = crossIndexTwo;
             crossIndexTwo = temp;
         }
-        specimen.insert(specimen.end(), breeders[i].begin(), breeders[i].begin()+crossIndex);
-        specimen.insert(specimen.end(), breeders[i+1].begin()+crossIndex, breeders[i+1].end());
-        specimen2.insert(specimen2.end(), breeders[i+1].begin(), breeders[i+1].begin()+crossIndex);
-        specimen2.insert(specimen2.end(),  breeders[i].begin()+crossIndex, breeders[i].end());
+        sequence.insert(sequence.end(), breeders[i].begin(), breeders[i].begin()+crossIndex);
+        sequence.insert(sequence.end(), breeders[i+1].begin()+crossIndex, breeders[i+1].end());
+        sequence2.insert(sequence2.end(), breeders[i+1].begin(), breeders[i+1].begin()+crossIndex);
+        sequence2.insert(sequence2.end(),  breeders[i].begin()+crossIndex, breeders[i].end());
 
-        specimen3.insert(specimen3.end(), specimen.begin(), specimen.begin()+crossIndexTwo);
-        specimen3.insert(specimen3.end(), specimen2.begin()+crossIndexTwo, specimen2.end());
-        specimen4.insert(specimen4.end(), specimen2.begin(), specimen2.begin()+crossIndexTwo);
-        specimen4.insert(specimen4.end(), specimen.begin()+crossIndexTwo, specimen.end());
+        sequence3.insert(sequence3.end(), sequence.begin(), sequence.begin()+crossIndexTwo);
+        sequence3.insert(sequence3.end(), sequence2.begin()+crossIndexTwo, sequence2.end());
+        sequence4.insert(sequence4.end(), sequence2.begin(), sequence2.begin()+crossIndexTwo);
+        sequence4.insert(sequence4.end(), sequence.begin()+crossIndexTwo, sequence.end());
 
-        specimen.resize(breeders.size());
-        specimen2.resize(breeders.size());
-        specimen3.resize(breeders.size());
-        specimen4.resize(breeders.size());
-
-        newGen.push_back(specimen);
-        newGen.push_back(specimen2);
-        newGen.push_back(specimen3);
-        newGen.push_back(specimen4);
+        newGen.push_back(sequence);
+        newGen.push_back(sequence2);
+        newGen.push_back(sequence3);
+        newGen.push_back(sequence4);
     }
 
     newGen.resize(mGenSize);
@@ -114,6 +161,11 @@ void Incubator<T>::twoPoint(const vector<vector<T>>& breeders){
 template <typename T>
 void Incubator<T>::setCrossoverType(CrossoverType coType){
     mCrossoverType = coType;
+}
+
+template <typename T>
+void Incubator<T>::setMutationType(MutationType muType) {
+    mMutationType = muType;
 }
 
 template <typename T>

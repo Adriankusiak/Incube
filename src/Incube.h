@@ -33,31 +33,43 @@ public:
          TWO_POINT,
     };
 
+    enum MutationType{
+        DESTRUCTIVE,
+        GENERATIVE,
+        ALLELE_SWAP
+    };
 
-Incubator();
-Incubator(const int& mutationRate, const int& genSize, const CrossoverType& coType);
 
-void seed(const Seeder<T>& geneSeeder);
-void seed(const vector<vector<T>>& seed);
-void evolve(Imprintable<T>& tester, const int stepCount);
-auto getGeneration() const;
-void setGenSize(const int& num);
-void setMutationChance(const float& percentage);
+    Incubator();
+    Incubator(const int& mutationRate, const int& genSize, const CrossoverType& coType);
 
-void setCrossoverType(CrossoverType type);
+    void seed(const Seeder<T>& geneSeeder);
+    void seed(const vector<vector<T>>& seed);
+    void evolve(Imprintable<T>& tester, const int stepCount);
+    auto getGeneration() const;
+    void setGenSize(const int& num);
+    void setMutationChance(const float& percentage);
+
+    void setCrossoverType(CrossoverType type);
+    void setMutationType(MutationType type);
 
 private:
 
-void singlePoint(const vector<vector<T>>& breeders);
-void twoPoint(const vector<vector<T>>& breeders);
+    void singlePoint(const vector<vector<T>>& breeders);
+    void twoPoint(const vector<vector<T>>& breeders);
+    void mutate();
+    void alleleSwap(vector<T>& sequence);
+    void alleleDestructive(vector<T>& sequence);
+    void alleleGenerative(vector<T>& sequence);
 
-vector<vector<T>> mCurrentGen;
-CrossoverType mCrossoverType;
-int mMutationRate;
-int mGenSize;
-std::random_device mSeed;
-std::mt19937 mRNGen;
-std::uniform_int_distribution<int> mDist;
+    vector<vector<T>> mCurrentGen;
+    CrossoverType mCrossoverType;
+    MutationType mMutationType;
+    float mMutationRate;
+    int mGenSize;
+    std::random_device mSeed;
+    std::mt19937 mRNGen;
+    std::uniform_real_distribution<float> mDist;
 
 };
 
