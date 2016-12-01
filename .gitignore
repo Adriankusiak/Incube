@@ -1,3 +1,9 @@
 bin/*
 bin/
 *.o
+.idea/*
+.idea/
+Jumper.cpp
+CMakeLists.txt
+cmake-build-debug/*
+cmake-build-debug/
