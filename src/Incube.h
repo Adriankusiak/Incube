@@ -11,7 +11,7 @@ template <typename T>
 class Imprintable{
 public:
     virtual void imprint(const vector<vector<T>>& imprints) = 0;
-    virtual const vector<vector<T>>& getFit() = 0;
+    virtual const vector<vector<T>> getFit() = 0;
 
     // Add fitness function substitution here
 };
@@ -20,7 +20,7 @@ public:
 template <typename T>
 class Seeder{
 public:
-    virtual vector<vector<T>> getSeeds() const = 0;
+    virtual vector<vector<T>> getSeeds() = 0;
 };
 
 
@@ -44,7 +44,7 @@ public:
     Incubator();
     Incubator(const int& mutationRate, const int& genSize, const CrossoverType& coType, const MutationType& muType);
 
-    void seed(const Seeder<T>& geneSeeder);
+    void seed(Seeder<T>& geneSeeder);
     void seed(const vector<vector<T>>& seed);
     void evolve(Imprintable<T>& tester, const int stepCount);
     vector<vector<T>> getGeneration() const;
@@ -53,7 +53,7 @@ public:
 
     void setCrossoverType(CrossoverType type);
     void setMutationType(MutationType type);
-
+    void setPossibleGenes(std::set<T> alleleSet);
 private:
 
     void singlePoint(const vector<vector<T>>& breeders);
@@ -62,7 +62,6 @@ private:
     void alleleSwap(vector<T>& sequence);
     void alleleDestructive(vector<T>& sequence);
     void alleleGenerative(vector<T>& sequence);
-    void setPossibleGenes(std::set<T> alleleSet);
 
     vector<vector<T>> mCurrentGen;
     CrossoverType mCrossoverType;
@@ -74,8 +73,6 @@ private:
     std::uniform_real_distribution<float> mDist;
     std::set<T> mAlleleSet;
 };
-
-
 
 
 #include <math.h>
@@ -97,7 +94,7 @@ Incubator<T>::Incubator(const int& mutationRate, const int& genSize,
 }
 
 template <typename T>
-void Incubator<T>::seed(const Seeder<T>& geneSeeder){
+void Incubator<T>::seed(Seeder<T>& geneSeeder){
     mCurrentGen = geneSeeder.getSeeds();
     mGenSize  = mCurrentGen.size();
 }
@@ -108,34 +105,42 @@ void Incubator<T>::seed(const vector<vector<T>>& seed){
     mGenSize  = mCurrentGen.size();
 }
 
+
+
 template <typename T>
 void Incubator<T>::evolve(Imprintable<T>& tester, const int stepCount){
-    tester.imprint(mCurrentGen);
-    auto fit = tester.getFit();
-    int newSize = mCurrentGen.size();
-    if(fit.size() < newSize){
-        for(auto f: fit){
-            mCurrentGen.erase(std::find(mCurrentGen.begin(), mCurrentGen.end(), f));
-        }
-        fit.reserve(newSize);
-        fit.insert(fit.end(), mCurrentGen.begin(), mCurrentGen.end());
-    }
-    switch(mCrossoverType){
-        case SINGLE_POINT:
-            singlePoint(fit);
-            break;
-        case TWO_POINT:
-            twoPoint(fit);
-            break;
-    }
+    for(int i = 0; i < stepCount; ++i) {
+        tester.imprint(mCurrentGen);
 
-    mutate();
+        vector<vector<T>> fit = tester.getFit();
+
+        int newSize = mCurrentGen.size();
+        if (fit.size() < newSize) {
+            for (auto f: fit) {
+                mCurrentGen.erase(std::find(mCurrentGen.begin(), mCurrentGen.end(), f));
+            }
+            fit.reserve(newSize);
+            fit.insert(fit.end(), mCurrentGen.begin(), mCurrentGen.end());
+        }
+
+        switch (mCrossoverType) {
+            case SINGLE_POINT:
+                singlePoint(fit);
+                break;
+            case TWO_POINT:
+                twoPoint(fit);
+                break;
+        }
+
+        mutate();
+    }
 }
 
 
 template <typename T>
 void Incubator<T>::mutate() {
-    for(auto sequence : mCurrentGen){
+
+    for(auto& sequence : mCurrentGen){
         if(mDist(mRNGen) < mMutationRate ? true : false){
             switch(mMutationType){
                 case ALLELE_SWAP:
@@ -146,7 +151,7 @@ void Incubator<T>::mutate() {
                     break;
                 case GENERATIVE:
                     alleleGenerative(sequence);
-                    break;
+                break;
                 default:
                     break;
             }
@@ -162,8 +167,11 @@ void Incubator<T>::alleleDestructive(vector<T>& sequence){
 
 template <typename T>
 void Incubator<T>::alleleGenerative(vector<T>& sequence) {
+    std::uniform_int_distribution<int> dist(0, mAlleleSet.size());
     int randIndx = sequence.size()*(floor(mDist(mRNGen))/100);
-    sequence.erase(sequence.begin()+randIndx);
+    auto allelItr = mAlleleSet.begin();
+    std::advance(allelItr,dist(mRNGen));
+    sequence.insert(sequence.begin()+randIndx, *(allelItr));
 }
 
 template <typename T>
@@ -173,7 +181,6 @@ void Incubator<T>::alleleSwap(vector<T>& sequence) {
 
     while(randIndx==randIndx2) randIndx2 = sequence.size()*(floor(mDist(mRNGen))/100);
     T allele = sequence[randIndx];
-
 
     sequence[randIndx] = sequence[randIndx2];
     sequence[randIndx2] = allele;
@@ -186,7 +193,7 @@ template <typename T>
 void Incubator<T>::singlePoint(const vector<vector<T>>& breeders){
 
     vector<vector<T>> newGen;
-    for(int i = 0; i < mGenSize+2/2; ++i){
+    for(int i = 0; i < (mGenSize+2)/2; ++i){
         vector<T> sequence;
         vector<T> sequence2;
         int crossIndex = floor(breeders[0].size()*((mDist(mRNGen)/100)));
@@ -206,14 +213,28 @@ template <typename T>
 void Incubator<T>::twoPoint(const vector<vector<T>>& breeders){
 
     vector<vector<T>> newGen;
-    for(int i = 0; i < mGenSize+4/4; ++i){
+    for(int i = 0; i < (mGenSize+4)/4; ++i){
         vector<T> sequence;
         vector<T> sequence2;
         vector<T> sequence3;
         vector<T> sequence4;
+        int size_one = breeders[i].size();
+        int size_two = breeders[i+1].size();
+        int min,max;
+        if(size_one < size_two){
+            min = size_one;
+            max = size_two;
+        }else{
+            max = size_one;
+            min = size_two;
+        }
+        sequence.reserve(max);
+        sequence2.reserve(max);
+        sequence3.reserve(max);
+        sequence4.reserve(max);
 
-        int crossIndex = floor(breeders[0].size()*((mDist(mRNGen)/100)));
-        int crossIndexTwo = floor(breeders[0].size()*((mDist(mRNGen)/100)));
+        int crossIndex = floor(min*((mDist(mRNGen)/100)));
+        int crossIndexTwo = floor(min*((mDist(mRNGen)/100)));
         if(crossIndex > crossIndexTwo){
             int temp = crossIndex;
             crossIndex = crossIndexTwo;
@@ -233,6 +254,7 @@ void Incubator<T>::twoPoint(const vector<vector<T>>& breeders){
         newGen.push_back(sequence2);
         newGen.push_back(sequence3);
         newGen.push_back(sequence4);
+
     }
 
     newGen.resize(mGenSize);
